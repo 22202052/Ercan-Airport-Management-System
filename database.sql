@@ -2,62 +2,62 @@ DROP DATABASE IF EXISTS ErcanAirportDB;
 CREATE DATABASE ErcanAirportDB;
 USE ErcanAirportDB;
 
-CREATE TABLE Employees ( 
-    SSN VARCHAR(11) PRIMARY KEY, 
-    Name VARCHAR(100) NOT NULL, 
+CREATE TABLE Employees (
+    SSN VARCHAR(11) PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
     UnionMembershipNo VARCHAR(20) UNIQUE NOT NULL
 );
 
-CREATE TABLE Technicians ( 
-    SSN VARCHAR(11) PRIMARY KEY, 
-    Salary DECIMAL(10,2) NOT NULL, 
+CREATE TABLE Technicians (
+    SSN VARCHAR(11) PRIMARY KEY,
+    Salary DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (SSN) REFERENCES Employees(SSN) ON DELETE CASCADE
 );
 
-CREATE TABLE TrafficControllers ( 
-    SSN VARCHAR(11) PRIMARY KEY, 
-    LastMedicalExamDate DATE NOT NULL, 
+CREATE TABLE TrafficControllers (
+    SSN VARCHAR(11) PRIMARY KEY,
+    LastMedicalExamDate DATE NOT NULL,
     FOREIGN KEY (SSN) REFERENCES Employees(SSN) ON DELETE CASCADE
 );
 
-CREATE TABLE Airplanes ( 
-    PlaneNo VARCHAR(20) PRIMARY KEY, 
-    ModelNo VARCHAR(50) NOT NULL, 
+CREATE TABLE Airplanes (
+    PlaneNo VARCHAR(20) PRIMARY KEY,
+    ModelNo VARCHAR(50) NOT NULL,
     Capacity INT NOT NULL CHECK (Capacity > 0)
 );
 
-CREATE TABLE Hangars ( 
-    HangarNo VARCHAR(10) PRIMARY KEY, 
+CREATE TABLE Hangars (
+    HangarNo VARCHAR(10) PRIMARY KEY,
     Location VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE HangarLogs ( 
-    LogID INT AUTO_INCREMENT PRIMARY KEY, 
-    PlaneNo VARCHAR(20) NOT NULL, 
-    HangarNo VARCHAR(10) NOT NULL, 
-    InDate DATETIME NOT NULL, 
-    OutDate DATETIME, 
-    FOREIGN KEY (PlaneNo) REFERENCES Airplanes(PlaneNo) ON DELETE CASCADE, 
-    FOREIGN KEY (HangarNo) REFERENCES Hangars(HangarNo) ON DELETE CASCADE, 
+CREATE TABLE HangarLogs (
+    LogID INT AUTO_INCREMENT PRIMARY KEY,
+    PlaneNo VARCHAR(20) NOT NULL,
+    HangarNo VARCHAR(10) NOT NULL,
+    InDate DATETIME NOT NULL,
+    OutDate DATETIME,
+    FOREIGN KEY (PlaneNo) REFERENCES Airplanes(PlaneNo) ON DELETE CASCADE,
+    FOREIGN KEY (HangarNo) REFERENCES Hangars(HangarNo) ON DELETE CASCADE,
     CONSTRAINT CheckDates CHECK (OutDate IS NULL OR OutDate >= InDate)
 );
 
-CREATE TABLE Tests ( 
-    TestNo VARCHAR(10) PRIMARY KEY, 
-    TestName VARCHAR(100) NOT NULL, 
+CREATE TABLE Tests (
+    TestNo VARCHAR(10) PRIMARY KEY,
+    TestName VARCHAR(100) NOT NULL,
     MaxScore INT NOT NULL DEFAULT 100
 );
 
-CREATE TABLE TestingEvents ( 
-    EventID INT AUTO_INCREMENT PRIMARY KEY, 
-    PlaneNo VARCHAR(20) NOT NULL, 
-    TechnicianSSN VARCHAR(11) NOT NULL, 
-    TestNo VARCHAR(10) NOT NULL, 
-    TestDate DATE NOT NULL, 
-    HoursSpent DECIMAL(5,2) NOT NULL CHECK (HoursSpent > 0), 
-    Score INT NOT NULL CHECK (Score >= 0), 
-    FOREIGN KEY (PlaneNo) REFERENCES Airplanes(PlaneNo) ON DELETE CASCADE, 
-    FOREIGN KEY (TechnicianSSN) REFERENCES Technicians(SSN) ON DELETE CASCADE, 
+CREATE TABLE TestingEvents (
+    EventID INT AUTO_INCREMENT PRIMARY KEY,
+    PlaneNo VARCHAR(20) NOT NULL,
+    TechnicianSSN VARCHAR(11) NOT NULL,
+    TestNo VARCHAR(10) NOT NULL,
+    TestDate DATE NOT NULL,
+    HoursSpent DECIMAL(5,2) NOT NULL CHECK (HoursSpent > 0),
+    Score INT NOT NULL CHECK (Score >= 0),
+    FOREIGN KEY (PlaneNo) REFERENCES Airplanes(PlaneNo) ON DELETE CASCADE,
+    FOREIGN KEY (TechnicianSSN) REFERENCES Technicians(SSN) ON DELETE CASCADE,
     FOREIGN KEY (TestNo) REFERENCES Tests(TestNo) ON DELETE CASCADE
 );
 
@@ -68,11 +68,11 @@ CREATE TABLE Expertise (
     FOREIGN KEY (TechnicianSSN) REFERENCES Technicians(SSN) ON DELETE CASCADE
 );
 
-INSERT INTO Employees VALUES ('111', 'Ahmet Yılmaz', 'U-9081');
-INSERT INTO Employees VALUES ('222', 'Mehmet Demir', 'U-9082');
-INSERT INTO Employees VALUES ('333', 'Ayşe Kaya', 'U-7011');
-INSERT INTO Employees VALUES ('444', 'Fatma Şahin', 'U-7012');
-INSERT INTO Employees VALUES ('555', 'Ali Can', 'U-9085');
+INSERT INTO Employees VALUES ('111', 'John Doe', 'U-9081');
+INSERT INTO Employees VALUES ('222', 'Alice Smith', 'U-9082');
+INSERT INTO Employees VALUES ('333', 'Robert Johnson', 'U-7011');
+INSERT INTO Employees VALUES ('444', 'Emily Davis', 'U-7012');
+INSERT INTO Employees VALUES ('555', 'Michael Brown', 'U-9085');
 
 INSERT INTO Technicians VALUES ('111', 45000.00);
 INSERT INTO Technicians VALUES ('222', 48000.00);
@@ -106,15 +106,67 @@ INSERT INTO Expertise VALUES ('111', 'Airbus A320');
 INSERT INTO Expertise VALUES ('222', 'Boeing 737');
 INSERT INTO Expertise VALUES ('555', 'Boeing 777');
 
-SELECT PlaneNo, AVG(Score) AS AverageScore
-FROM TestingEvents
+SELECT PlaneNo, AVG(Score) AS AverageScore 
+FROM TestingEvents 
 GROUP BY PlaneNo;
 
-SELECT te.EventID, te.TechnicianSSN, e.Name, te.PlaneNo, te.HoursSpent
-FROM TestingEvents te
-JOIN Employees e ON te.TechnicianSSN = e.SSN
-WHERE te.HoursSpent > 4.0;
+SELECT e.Name, e.UnionMembershipNo, t.Salary 
+FROM Employees e 
+JOIN Technicians t ON e.SSN = t.SSN 
+WHERE t.Salary = (SELECT MAX(Salary) FROM Technicians);
+
+SELECT e.Name AS TechnicianName, exp.ModelNo 
+FROM Employees e 
+JOIN Expertise exp ON e.SSN = exp.TechnicianSSN;
 
 SELECT PlaneNo, HangarNo, InDate 
 FROM HangarLogs 
 WHERE OutDate IS NULL;
+
+SELECT e.Name, tc.LastMedicalExamDate 
+FROM Employees e 
+JOIN TrafficControllers tc ON e.SSN = tc.SSN 
+WHERE tc.LastMedicalExamDate < DATE_SUB('2026-05-23', INTERVAL 6 MONTH);
+
+SELECT TestNo, SUM(HoursSpent) AS TotalHours 
+FROM TestingEvents 
+GROUP BY TestNo;
+
+SELECT TechnicianSSN, COUNT(ModelNo) AS SpecialtyCount 
+FROM Expertise 
+GROUP BY TechnicianSSN 
+HAVING COUNT(ModelNo) >= 2;
+
+SELECT te.PlaneNo, e.Name AS TechnicianName, te.TestNo, te.Score 
+FROM TestingEvents te 
+JOIN Employees e ON te.TechnicianSSN = e.SSN 
+WHERE te.Score < 85;
+
+SELECT Name FROM Employees WHERE SSN IN (
+    SELECT SSN FROM Technicians WHERE SSN NOT IN (SELECT DISTINCT TechnicianSSN FROM TestingEvents)
+);
+
+SELECT 
+    (SELECT COUNT(*) FROM Technicians) AS TotalTechnicians, 
+    (SELECT COUNT(*) FROM TrafficControllers) AS TotalControllers;
+
+SELECT DISTINCT e.Name 
+FROM Employees e 
+JOIN Expertise exp ON e.SSN = exp.TechnicianSSN 
+WHERE exp.ModelNo LIKE 'Boeing%';
+
+SELECT HangarNo, COUNT(*) AS TotalVisits 
+FROM HangarLogs 
+GROUP BY HangarNo;
+
+SELECT te.EventID, te.PlaneNo, a.Capacity, te.TestNo 
+FROM TestingEvents te 
+JOIN Airplanes a ON te.PlaneNo = a.PlaneNo 
+WHERE a.Capacity > 200;
+
+SELECT * FROM TestingEvents 
+WHERE TestDate BETWEEN '2026-05-01' AND '2026-05-31';
+
+SELECT TechnicianSSN, MAX(Score) AS BestScore, MAX(HoursSpent) AS MaxHours 
+FROM TestingEvents 
+GROUP BY TechnicianSSN;
